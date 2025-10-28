@@ -40,23 +40,15 @@ jobs:
           password: ${{ secrets.ACR_PASSWORD }}
           # FIND: These use ACR secrets you created
 
-      - name: Build Docker image
+      - name: Build and push Docker image
         run: |
-          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
-                       -t ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest .
-        # EDIT: Builds image with commit SHA and 'latest' tag
-
-      - name: Push Docker image to ACR
-        run: |
-          docker push ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-          docker push ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest
-        # FIND: Pushes both tagged images to Azure Container Registry
+          docker build . -t ${{ secrets.ACR_LOGIN_SERVER }}/portfolio-website:latest
+          docker push ${{ secrets.ACR_LOGIN_SERVER }}/portfolio-website:latest
 
       - name: Display image information
         run: |
           echo "Image pushed successfully!"
-          echo "Image: ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
-          echo "Latest: ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest"
+          echo "Image: ${{ secrets.ACR_LOGIN_SERVER }}/portfolio-website:latest"
 
   deploy-to-aks:
     name: Deploy to Azure Kubernetes Service
@@ -82,7 +74,7 @@ jobs:
       - name: Update deployment image
         run: |
           kubectl set image deployment/portfolio-deployment \
-            portfolio-website=${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+            portfolio-website=${{ secrets.ACR_LOGIN_SERVER }}/portfolio-website:latest
         # EDIT: Updates the deployment with new image
 
       - name: Rollout status
@@ -109,6 +101,6 @@ jobs:
           echo "================================================"
           echo "Deployment completed successfully!"
           echo "================================================"
-          echo "Image: ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
+          echo "Image: ${{ secrets.ACR_LOGIN_SERVER }}/portfolio-website:latest"
           echo "Website URL: http://${{ steps.get-ip.outputs.PUBLIC_IP }}"
           echo "================================================"
