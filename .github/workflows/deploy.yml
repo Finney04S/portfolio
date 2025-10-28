@@ -56,7 +56,7 @@ jobs:
         run: |
           echo "Image pushed successfully!"
           echo "Image: ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
-          echo "Latest: ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest
+          echo "Latest: ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest"
 
   deploy-to-aks:
     name: Deploy to Azure Kubernetes Service
