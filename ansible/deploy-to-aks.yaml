@@ -1,0 +1,92 @@
+---
+- name: Deploy Portfolio Website to Azure Kubernetes Service
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    resource_group: "portfolio-rg"
+    aks_cluster_name: "portfolio-aks-cluster"
+    k8s_manifests_dir: "../k8s"
+    acr_name: "portfolioacryourname"
+
+  tasks:
+    - name: Display deployment information
+      debug:
+        msg: "Deploying portfolio website to {{ aks_cluster_name }}"
+
+    - name: Get AKS credentials
+      command: >
+        az aks get-credentials
+        --resource-group {{ resource_group }}
+        --name {{ aks_cluster_name }}
+        --overwrite-existing
+      register: aks_creds
+      changed_when: false
+
+    - name: Display kubectl context
+      command: kubectl config current-context
+      register: kubectl_context
+      changed_when: false
+
+    - name: Show current context
+      debug:
+        msg: "Current kubectl context: {{ kubectl_context.stdout }}"
+
+    - name: Apply Kubernetes Deployment
+      kubernetes.core.k8s:
+        state: present
+        src: "{{ k8s_manifests_dir }}/deployment.yaml"
+      register: deployment_result
+
+    - name: Apply Kubernetes Service
+      kubernetes.core.k8s:
+        state: present
+        src: "{{ k8s_manifests_dir }}/service.yaml"
+      register: service_result
+
+    - name: Wait for deployment to be ready
+      command: >
+        kubectl wait --for=condition=available --timeout=300s
+        deployment/portfolio-deployment
+      register: wait_result
+      changed_when: false
+
+    - name: Get deployment status
+      command: kubectl get deployment portfolio-deployment
+      register: deployment_status
+      changed_when: false
+
+    - name: Display deployment status
+      debug:
+        msg: "{{ deployment_status.stdout_lines }}"
+
+    - name: Get service details
+      command: kubectl get service portfolio-service
+      register: service_status
+      changed_when: false
+      retries: 5
+      delay: 10
+      until: service_status.rc == 0
+
+    - name: Display service information
+      debug:
+        msg: "{{ service_status.stdout_lines }}"
+
+    - name: Get LoadBalancer public IP
+      shell: |
+        kubectl get service portfolio-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
+      register: public_ip
+      retries: 10
+      delay: 15
+      until: public_ip.stdout != ""
+      changed_when: false
+
+    - name: Display public IP address
+      debug:
+        msg: |
+          ===========================================
+          Deployment Complete!
+          Access your portfolio at: http://{{ public_ip.stdout }}
+          ===========================================
+      when: public_ip.stdout != ""
